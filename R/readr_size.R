@@ -1,22 +1,38 @@
 read_csv_memsize <- function(x, guess_max = 1000, ...){
-  lines     <- count_lines(x) - 1L # 1L for header
-  guess_max <- min(guess_max, lines)
+  rows     <- count_lines(x) - 1L # 1L for header
+  guess_max <- min(guess_max, rows)
 
   dat   <- readr::read_csv(x, n_max = guess_max)
 
+  size_attr     <- extrapolate_attributes_size(dat, rows)
+  overhead_cols <- col_overhead(dat)
 
-  dat0 <- dat[0, ]
-  attributes(dat0) <- attributes(dat)
-  attr(dat0, "row.names") <- integer()
-
-
-  size_attr <- object.size(attributes(dat0)) + lines * 4L  # rownames
-  size_df   <- object.size(dat0)
-  overhead_cols <- ncol(dat) * 40L
-
-
-  raw_size <- (object.size(dat) - object.size(attributes(dat)))
-
-  raw_size / guess_max * lines + size_attr
+  raw_memsize(x) / guess_max * rows + size_attr
 }
 
+
+
+raw_memsize <- function(x){
+  object.size(x) - object.size(attributes(x))
+}
+
+
+
+
+extrapolate_attributes_size <- function(x, n){
+  stopifnot(is.data.frame(x))
+
+  x0 <- x[0, ]
+  attributes(x0) <- attributes(x)
+  attr(x0, "row.names") <- integer()
+
+  object.size(attributes(x0)) + as.integer(n) * 4L
+}
+
+
+
+
+col_overhead <- function(x){
+  stopifnot(is.data.frame(x))
+  ncol(x) * 40L
+}
